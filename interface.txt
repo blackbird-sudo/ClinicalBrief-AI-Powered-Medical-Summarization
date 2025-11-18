@@ -1,0 +1,88 @@
+
+import torch
+from model import TextSummarizationModel
+from config import Config
+
+class SummarizationPipeline:
+    def __init__(self, model_path=None, model_type="bart"):
+        self.device = torch.device('cuda' if torch.cuda.is_available() else 'cpu')
+        print(f"Using device: {self.device}")
+        
+        
+        self.model_wrapper = TextSummarizationModel(model_type=model_type)
+        
+        if model_path:
+            print(f"Loading model weights from: {model_path}")
+            self.model_wrapper.model.load_state_dict(
+                torch.load(model_path, map_location=self.device)
+            )
+        
+        self.model_wrapper.model.to(self.device)
+        self.model_wrapper.model.eval()
+        print("Model ready for inference!")
+    
+    def summarize(self, text, max_length=150, min_length=30):
+        return self.model_wrapper.generate_summary(
+            text, 
+            max_length=max_length, 
+            min_length=min_length
+        )
+    
+    def summarize_batch(self, texts, max_length=150):
+        
+        summaries = []
+        for i, text in enumerate(texts):
+            print(f"Processing text {i+1}/{len(texts)}...")
+            summary = self.summarize(text, max_length=max_length)
+            summaries.append(summary)
+        return summaries
+
+def main():
+    
+    pipeline = SummarizationPipeline()
+    
+    
+    sample_texts = [
+        """
+        Artificial intelligence is transforming healthcare in numerous ways. 
+        AI algorithms can analyze medical images to detect diseases like cancer 
+        more accurately than human doctors. Machine learning models can predict 
+        patient outcomes and suggest personalized treatment plans. Natural language 
+        processing helps in analyzing medical records and research papers. 
+        However, there are challenges including data privacy concerns and the 
+        need for large, high-quality datasets. Despite these challenges, AI in 
+        healthcare is expected to grow significantly in the coming years.
+        Many hospitals are already implementing AI solutions for diagnostics 
+        and treatment planning. The technology shows promise in drug discovery 
+        and clinical trial optimization as well.
+        """,
+        
+        """
+        The COVID-19 pandemic has significantly impacted global economies and healthcare systems. 
+        Many countries implemented lockdown measures to control the spread of the virus. 
+        Remote work became the norm for millions of employees worldwide. 
+        Healthcare workers faced unprecedented challenges dealing with the surge in patients. 
+        Vaccines were developed in record time through international collaboration. 
+        The pandemic highlighted the importance of robust public health infrastructure.
+        Economic recovery efforts are ongoing as countries adapt to the new normal.
+        """
+    ]
+    
+    print("Text Summarization Demo")
+    
+    
+    for i, text in enumerate(sample_texts):
+        print(f"\n Text {i+1}:")
+        print(f"Original length: {len(text)} characters")
+        
+        
+        summary = pipeline.summarize(text)
+        
+        print(f"\n Summary {i+1}:")
+        print(summary)
+        print(f"Summary length: {len(summary)} characters")
+        print(f"Compression ratio: {(1 - len(summary)/len(text))*100:.1f}%")
+        
+
+if __name__ == "__main__":
+    main()
